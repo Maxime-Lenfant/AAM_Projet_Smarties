@@ -8,17 +8,7 @@ from math import sqrt
 import csv
 
 RGBMatTemp = (
-    ("Orange", [225, 101, 54]),
-    ("Rouge", [208, 46, 73]),
-    ("Jaune", [224, 209, 78]),
-    ("Mauve", [171, 147, 207]),
-    ("Rose", [222, 120, 182]),
-    ("Cyan", [119, 200, 227]),
-    ("Lime", [141, 196, 102]),
-    ("Marron", [133, 77, 76])
-)
-
-RGBMatTemp = (
+	("Blanc", [255,255,255]),
     ("Orange", [225, 101, 54]),
     ("Rouge", [208, 46, 73]),
     ("Jaune", [224, 209, 78]),
@@ -85,57 +75,47 @@ class PixelImage:
 
 		OutVisu.tolist()
 		return OutUtil.tolist()
-
-	def nearest_colour(self, subjects, query ):
-		'''
-		Find the nearest colour in subjects to the query colour.
-		'''
-		indice = 100000
-		for CouleurSmarties in subjects :
-			s = 0
-			for i in range(3):
-				s += (CouleurSmarties[1][i] - query[i])**2
-			if indice > s :
-				indice = s
-				top = CouleurSmarties
-			#indice = min( subjects, key = lambda subject: sum( (s[1] - q) ** 2 for s, q in zip( tuple(CouleurSmarties), tuple(query) ) ) )
-		return CouleurSmarties
 	
-	def RGB2Smarties(self, RGBMat:list) ->list :
-		#Ouverture du fichier contenant les couleurs des smarties vers une liste
-		RGB_Smart_Mat = [] # Matrice des couleurs des Smarties en RGB	
-		Smarties_Mat_Select = [] # Matrice des smarties selectionnés
-		with open('couleurs.csv', newline='') as csvCoul :
-			reader = csv.reader(csvCoul, delimiter=';')
-			for row in reader :
-				RGB_Smart_Mat.append(RGBMatTemp[1])
-			#RGB_Smart_Mat = tuple(RGB_Smart_Mat)
+	def nearest_colour_v2(self, subjects, query):
+		min_distance = float('inf')
+		closest_colour = None
+		
+		for colour in subjects:
+			distance = sum((colour[i] - query[i]) ** 2 for i in range(3))
 
-		#Conversion en cherchant la couleur de smarties la plus proche.
-		tempROW = []
+			if distance < min_distance:
+				min_distance = distance
+				closest_colour = colour
+		return closest_colour
+	
+	def load_smarties_colours(self):
+		rgb_smarties = [colour[1] for colour in RGBMatTemp]
+		return rgb_smarties
+
+	def RGB2Smarties_v2(self, RGBMat: list) -> np.ndarray:
+		rgb_smarties = self.load_smarties_colours()
+		if not rgb_smarties:
+			raise ValueError("Aucune couleur smarties chargée")
+		smarties_matrix = []
 		for row in RGBMat:
+			smarties_row = []
 			for pixel in row:
-				tempROW.append(self.nearest_colour(RGB_Smart_Mat, pixel))
-			Smarties_Mat_Select.append(tempROW)
-			tempROW = []
-		return Smarties_Mat_Select
+				closest = self.nearest_colour_v2(rgb_smarties, pixel)
+				smarties_row.append(closest)
+			smarties_matrix.append(smarties_row)
+
+		return np.array(smarties_matrix, dtype=np.uint8)
 
 
 if True :
-	poubelle = PixelImage(img_path="image/tilted.png")
+	poubelle = PixelImage(img_path="image/dep.jpg", pixel_size=(20,20))
 	poubelle.load_image()
 	Mat = poubelle.pixelisation()
-	for i in range(len(Mat)):
-		print(Mat[i])
-		for j in range(len(Mat[i])):
-			if j >19 :
-				Mat[i].pop(i)
-
-	hexMat = poubelle.RGB2Smarties(Mat)
-	for i in range(len(hexMat)):
-		print(hexMat[i])
-	gen = np.array(hexMat,dtype=np.uint16)
-	cv2.imshow('i',gen)
+	smartiesImage = poubelle.RGB2Smarties_v2(Mat)
+	print("Shape de l'image Smarties:", smartiesImage.shape)
+	print("Type:", smartiesImage.dtype)
+	
+	cv2.imshow('i', smartiesImage)
 
 
 cv2.waitKey(0)
